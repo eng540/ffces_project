@@ -6,6 +6,10 @@ echo "  FFCES - نظام العهد المالية المتكامل"
 echo "  Starting up..."
 echo "============================================="
 
+# Install missing email-validator for Pydantic
+echo "[0] Installing email-validator..."
+pip install email-validator
+
 # ── 1. Clean DATABASE_URL ──
 if [ -n "$DATABASE_URL" ]; then
     echo "[0] Cleaning DATABASE_URL..."
@@ -26,7 +30,6 @@ file_path = "/app/alembic/versions/001_initial_schema.py"
 try:
     with open(file_path, 'r') as f:
         content = f.read()
-    # Split op.execute("""...""") into separate statements
     pattern = r'op\.execute\(("""|\'\'\')(.*?)\1\)'
     def replacer(match):
         sql_block = match.group(2)
