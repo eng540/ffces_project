@@ -73,9 +73,9 @@ class User(Base):
     organization = relationship("Organization", back_populates="users")
     custodies_as_holder = relationship("Custody", foreign_keys="Custody.holder_id", back_populates="holder")
     custodies_as_custodian = relationship("Custody", foreign_keys="Custody.custodian_id", back_populates="custodian")
-    expenses = relationship("Expense", back_populates="created_by_user")
-    work_records = relationship("WorkRecord", back_populates="user")
-    settlements = relationship("Settlement", back_populates="user")
+    expenses = relationship("Expense", foreign_keys="Expense.created_by", back_populates="created_by_user")
+    work_records = relationship("WorkRecord", foreign_keys="WorkRecord.user_id", back_populates="user")
+    settlements = relationship("Settlement", foreign_keys="Settlement.user_id", back_populates="user")
     approvals_requested = relationship("ApprovalWorkflow", foreign_keys="ApprovalWorkflow.approver_id", back_populates="approver")
 
 
@@ -269,7 +269,7 @@ class WorkRecord(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    user = relationship("User", back_populates="work_records")
+    user = relationship("User", foreign_keys=[user_id], back_populates="work_records")
     project = relationship("Project", back_populates="work_records")
     approver = relationship("User", foreign_keys=[approved_by])
 
@@ -300,7 +300,7 @@ class Entitlement(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    user = relationship("User")
+    user = relationship("User", foreign_keys=[user_id])
     project = relationship("Project", back_populates="entitlements")
     rule = relationship("EntitlementRule", back_populates="entitlements")
     work_record = relationship("WorkRecord")
@@ -370,7 +370,7 @@ class Settlement(Base):
 
     # Relationships
     custody = relationship("Custody", back_populates="settlements")
-    user = relationship("User", back_populates="settlements")
+    user = relationship("User", foreign_keys=[user_id], back_populates="settlements")
     approver = relationship("User", foreign_keys=[approved_by])
 
 
