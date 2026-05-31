@@ -30,7 +30,7 @@ def upgrade() -> None:
     INSERT INTO users (id, email, full_name, hashed_password, employee_number, phone, role, department, job_title, is_active, organization_id)
     VALUES (
         '00000000-0000-4000-8000-000000000002',
-        'admin@ffces.com', 'مدير النظام', '$2b$12$LJ3m4ys3Nz/6KF7wGFvMbOs7T1k6aS8Z7QGr0PMJoL1ZO6nPCc1qK',
+        'admin@ffces.com', 'مدير النظام', '$2b$12$9sfVEom08Eqfb1V6xIV9geJeHVAVfHKR/LIfeC.Kjno5Ai1XEZSq2',
         'EMP-0001', '+966-50-0000001', 'admin', 'الإدارة', 'مدير النظام', TRUE,
         '00000000-0000-4000-8000-000000000001'
     ) ON CONFLICT (id) DO NOTHING

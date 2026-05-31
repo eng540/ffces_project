@@ -70,6 +70,12 @@ alembic upgrade head 2>&1 || {
 }
 echo "  Migrations completed successfully."
 
+# ── Ensure Admin User exists with correct password ──
+# This is needed because the seed migration uses ON CONFLICT DO NOTHING,
+# so if the migration was already applied with a wrong hash, re-running won't fix it.
+echo "[5/5] Ensuring admin user..."
+python3 /app/ensure_admin.py
+
 echo "============================================="
 echo "  Starting FFCES server on port ${PORT:-8000}..."
 echo "  DATABASE_URL ready"
