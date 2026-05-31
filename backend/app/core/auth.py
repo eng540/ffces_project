@@ -177,21 +177,8 @@ async def refresh_token(refresh_token: str, db: AsyncSession = Depends(get_db)):
     return {"access_token": new_access_token, "token_type": "bearer"}
 
 
-@router.get("/me")
-async def get_me(current_user=Depends(get_current_user)):
-    """بيانات المستخدم الحالي - Current user profile"""
-    return {
-        "id": str(current_user.id),
-        "email": current_user.email,
-        "full_name": current_user.full_name,
-        "role": current_user.role,
-        "employee_number": current_user.employee_number,
-        "phone": current_user.phone,
-        "organization_id": str(current_user.organization_id) if current_user.organization_id else None,
-    }
-
-
 # ===== Dependency: Get Current User =====
+# MUST be defined before any endpoint that uses Depends(get_current_user)
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
@@ -234,3 +221,17 @@ def require_role(allowed_roles: List[str]):
             )
         return current_user
     return role_checker
+
+
+@router.get("/me")
+async def get_me(current_user=Depends(get_current_user)):
+    """بيانات المستخدم الحالي - Current user profile"""
+    return {
+        "id": str(current_user.id),
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "role": current_user.role,
+        "employee_number": current_user.employee_number,
+        "phone": current_user.phone,
+        "organization_id": str(current_user.organization_id) if current_user.organization_id else None,
+    }
