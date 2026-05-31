@@ -54,15 +54,20 @@ async def lifespan(app: FastAPI):
     print(f"   Debug: {settings.DEBUG}")
     print(f"   CORS origins: {settings.cors_origins_list}")
 
-    # ==== إنشاء الجداول تلقائياً (Automatic table creation) ====
+    # ===== IMPORT ALL MODELS HERE =====
+    # هذا السطر ضروري ليعرف SQLAlchemy جميع الجداول
+    import app.models  # لا تقم بحذفه
+
+    # ===== CREATE TABLES AUTOMATICALLY =====
     print("   Creating database tables (if not exist)...")
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-        print("   Database tables created/verified successfully")
+        print("   ✅ Database tables created/verified successfully")
     except Exception as e:
-        print(f"   Error creating tables: {e}")
-        # لا نرفع الاستثناء لئلا يموت التطبيق، لكن نطبع الخطأ
+        print(f"   ❌ Error creating tables: {e}")
+        # لا نرفع الاستثناء حتى لا يموت التطبيق، لكن نطبع الخطأ
+        # يمكنك إضافة raise e إذا أردت إيقاف التشغيل عند الفشل
 
     # Try connecting to Redis
     try:
