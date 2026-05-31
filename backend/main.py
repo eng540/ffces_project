@@ -13,13 +13,15 @@ Production-ready FastAPI backend with:
 - Multi-level approval workflows
 - Full Arabic RTL support
 """
+import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.database import Base, engine, get_db
@@ -53,21 +55,6 @@ async def lifespan(app: FastAPI):
     print(f"   Database: {settings.DATABASE_URL.split('@')[-1] if '@' in settings.DATABASE_URL else 'configured'}")
     print(f"   Debug: {settings.DEBUG}")
     print(f"   CORS origins: {settings.cors_origins_list}")
-
-    # ===== IMPORT ALL MODELS HERE =====
-    # هذا السطر ضروري ليعرف SQLAlchemy جميع الجداول
-    import app.models  # لا تقم بحذفه
-
-    # ===== CREATE TABLES AUTOMATICALLY =====
-    print("   Creating database tables (if not exist)...")
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        print("   ✅ Database tables created/verified successfully")
-    except Exception as e:
-        print(f"   ❌ Error creating tables: {e}")
-        # لا نرفع الاستثناء حتى لا يموت التطبيق، لكن نطبع الخطأ
-        # يمكنك إضافة raise e إذا أردت إيقاف التشغيل عند الفشل
 
     # Try connecting to Redis
     try:
@@ -179,17 +166,17 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-# ===== Root Endpoint =====
-@app.get("/", tags=["الجذر"])
-async def root():
-    """
-    نقطة الدخول الجذرية
-    Root endpoint - redirects to docs
-    """
-    return {
-        "name": "FFCES API",
-        "name_ar": "نظام العهد المالية والاستحقاقات",
-        "version": "1.0.0",
-        "docs": "/api/docs",
-        "health": "/api/v1/health",
-    }
+# ── Serve Frontend Static Files ──
+STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+if os.path.exists(os.path.join(STATIC_DIR, "index.html")):
+    # Mount _next static assets
+    next_dir = os.path.join(STATIC_DIR, "_next")
+    if os.path.isdir(next_dir):
+        app.mount("/_next", StaticFiles(directory=next_dir), name="next_static")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        file_path = os.path.join(STATIC_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))

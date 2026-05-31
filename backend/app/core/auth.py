@@ -46,64 +46,21 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-# ===== Dependency: Get Current User =====
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db),
-):
-    """استخراج المستخدم الحالي من رمز الوصول"""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="لا يمكن التحقق من بيانات المصادقة",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-
-    from app.models import User
-    query = select(User).where(User.id == uuid.UUID(user_id))
-    result = await db.execute(query)
-    user = result.scalar_one_or_none()
-
-    if user is None:
-        raise credentials_exception
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="الحساب معطل")
-
-    return user
-
-
-# ===== Dependency: Require Specific Role =====
-def require_role(allowed_roles: List[str]):
-    """التأكد من أن المستخدم لديه دور محدد"""
-    async def role_checker(current_user=Depends(get_current_user)):
-        if current_user.role not in allowed_roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"الوصول مرفوض. الأدوار المسموحة: {', '.join(allowed_roles)}",
-            )
-        return current_user
-    return role_checker
-
-
-# ===== Router =====
+# ===== Router (embedded here since it's the auth module) =====
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/auth", tags=["المصادقة"])
 
+# We import User lazily to avoid circular imports
+# The actual model is in app.models
 
-# ===== Helper to get User model lazily (avoid circular imports) =====
+
 def _get_user_model():
+    """Lazy import to avoid circular dependency."""
     from app.models import User
     return User
 
 
-# ===== Endpoints =====
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
     email: str,
@@ -232,3 +189,48 @@ async def get_me(current_user=Depends(get_current_user)):
         "phone": current_user.phone,
         "organization_id": str(current_user.organization_id) if current_user.organization_id else None,
     }
+
+
+# ===== Dependency: Get Current User =====
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+):
+    """استخراج المستخدم الحالي من رمز الوصول"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="لا يمكن التحقق من بيانات المصادقة",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    User = _get_user_model()
+    query = select(User).where(User.id == uuid.UUID(user_id))
+    result = await db.execute(query)
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        raise credentials_exception
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="الحساب معطل")
+
+    return user
+
+
+# ===== Dependency: Require Specific Role =====
+def require_role(allowed_roles: List[str]):
+    """التأكد من أن المستخدم لديه دور محدد"""
+    async def role_checker(current_user=Depends(get_current_user)):
+        if current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"الوصول مرفوض. الأدوار المسموحة: {', '.join(allowed_roles)}",
+            )
+        return current_user
+    return role_checker
