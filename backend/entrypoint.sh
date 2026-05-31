@@ -6,19 +6,49 @@ echo "  FFCES - نظام العهد المالية المتكامل"
 echo "  Starting up..."
 echo "============================================="
 
-# ── Fix DATABASE_URL ──
-# Railway sometimes provides malformed URLs with template artifacts like }} or ${}
-# Use separate Python script to avoid bash substitution conflicts with regex patterns
+# ── 1. Clean DATABASE_URL ──
 if [ -n "$DATABASE_URL" ]; then
     echo "[0] Cleaning DATABASE_URL..."
-    CLEAN_URL=$(python3 /app/clean_url.py) && export DATABASE_URL="$CLEAN_URL"
+    CLEAN_URL=$(python3 /app/clean_url.py)
+    if [ -n "$CLEAN_URL" ]; then
+        export DATABASE_URL="$CLEAN_URL"
+        echo "  DATABASE_URL cleaned successfully"
+    else
+        echo "  WARNING: Failed to clean DATABASE_URL, using original"
+    fi
 fi
 
-# Wait for PostgreSQL
-if [ -n "$DATABASE_URL" ]; then
-    echo "[1/3] Waiting for PostgreSQL..."
+# ── 2. Fix Alembic migration for asyncpg (split multiple statements) ──
+echo "[1/4] Fixing migration for asyncpg compatibility..."
+python3 << 'EOF'
+import re
+file_path = "/app/alembic/versions/001_initial_schema.py"
+try:
+    with open(file_path, 'r') as f:
+        content = f.read()
+    # Split op.execute("""...""") into separate statements
+    pattern = r'op\.execute\(("""|\'\'\')(.*?)\1\)'
+    def replacer(match):
+        sql_block = match.group(2)
+        statements = [s.strip() for s in sql_block.split(';') if s.strip()]
+        if len(statements) <= 1:
+            return match.group(0)
+        new_calls = '\n'.join(f'    op.execute(\"\"\"{stmt}\"\"\")' for stmt in statements)
+        return new_calls
+    new_content = re.sub(pattern, replacer, content, flags=re.DOTALL)
+    if new_content != content:
+        with open(file_path, 'w') as f:
+            f.write(new_content)
+        print("  Migration fixed: split multiple statements")
+    else:
+        print("  Migration already compatible or no changes needed")
+except Exception as e:
+    print(f"  WARNING: Could not fix migration: {e}")
+EOF
 
-    # Extract host:port from DATABASE_URL using Python (avoids bash regex issues)
+# ── 3. Wait for PostgreSQL ──
+if [ -n "$DATABASE_URL" ]; then
+    echo "[2/4] Waiting for PostgreSQL..."
     DB_CONN=$(python3 -c "
 import os, re
 url = os.environ.get('DATABASE_URL', '')
@@ -42,8 +72,8 @@ print(f'{m.group(1)}:{m.group(2)}' if m else 'localhost:5432')
     echo "  PostgreSQL check complete."
 fi
 
-# Check Redis (non-blocking)
-echo "[2/3] Checking Redis..."
+# ── 4. Check Redis ──
+echo "[3/4] Checking Redis..."
 python3 -c "
 import redis, os
 url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
@@ -55,16 +85,18 @@ except Exception as e:
     print(f'  Redis: not available ({e})')
 " 2>/dev/null || echo "  Redis: not available"
 
-# Run Alembic migrations
-echo "[3/3] Running Alembic migrations..."
+# ── 5. Run Alembic migrations ──
+echo "[4/4] Running Alembic migrations..."
 cd /app
-alembic upgrade head 2>&1 || {
+if alembic upgrade head; then
+    echo "  Migrations completed successfully."
+else
     echo "  WARNING: Migration failed - but continuing to start server."
     echo "  Tables may already exist from a previous run."
-}
+fi
 
 echo "============================================="
 echo "  Starting FFCES server on port 8000..."
-echo "  DATABASE_URL cleaned and ready"
+echo "  DATABASE_URL ready"
 echo "============================================="
 exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
