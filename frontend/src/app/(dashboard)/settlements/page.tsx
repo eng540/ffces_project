@@ -41,8 +41,8 @@ export default function SettlementsPage() {
       if (custodyFilter) params.custody_id = custodyFilter;
       if (searchQuery) params.search = searchQuery;
       const res = await api.getSettlements(params) as PaginatedResponse<Settlement>;
-      setSettlements(res.items);
-      setTotal(res.total);
+      setSettlements(res.items || []);
+      setTotal(res.total || 0);
     } catch {
       addToast({ title: "خطأ", description: "فشل تحميل التسويات", variant: "destructive" });
     } finally {
@@ -51,7 +51,11 @@ export default function SettlementsPage() {
   }, [page, statusFilter, custodyFilter, searchQuery, addToast]);
 
   useEffect(() => {
-    api.getCustodies({status: "open"}).then((data: unknown) => setCustodies(data as SelectOption[])).catch(() => {});
+    // FIX: properly extract items from paginated response
+    api.getCustodies({ status: "open", page_size: "200" }).then((res: any) => {
+      const items = Array.isArray(res) ? res : (res?.items || []);
+      setCustodies(items.map((c: any) => ({ value: c.id, label: c.description || c.holder_name || c.id })));
+    }).catch(() => {});
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);

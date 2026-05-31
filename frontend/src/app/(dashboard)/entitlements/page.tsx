@@ -44,8 +44,8 @@ export default function EntitlementsPage() {
       if (projectFilter) params.project_id = projectFilter;
       if (searchQuery) params.search = searchQuery;
       const res = await api.getEntitlements(params) as PaginatedResponse<Entitlement>;
-      setEntitlements(res.items);
-      setTotal(res.total);
+      setEntitlements(res.items || []);
+      setTotal(res.total || 0);
     } catch {
       addToast({ title: "خطأ", description: "فشل تحميل المستحقات", variant: "destructive" });
     } finally {
@@ -54,9 +54,16 @@ export default function EntitlementsPage() {
   }, [page, statusFilter, partyFilter, projectFilter, searchQuery, addToast]);
 
   useEffect(() => {
+    // FIX: properly extract items from paginated responses
     Promise.all([
-      api.getParties().then((data: unknown) => setParties(data as SelectOption[])).catch(() => {}),
-      api.getProjects().then((data: unknown) => setProjects(data as SelectOption[])).catch(() => {}),
+      api.getParties({ page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setParties(items.map((p: any) => ({ value: p.id, label: p.name || p.id })));
+      }).catch(() => {}),
+      api.getProjects({ page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setProjects(items.map((p: any) => ({ value: p.id, label: p.name || p.description || p.id })));
+      }).catch(() => {}),
     ]);
   }, []);
 

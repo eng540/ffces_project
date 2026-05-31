@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
@@ -12,13 +12,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { PageLoader, EmptyState } from "@/components/shared/loading";
+import { PageLoader, EmptyState, LoadingSpinner } from "@/components/shared/loading";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { Custody, PaginatedResponse, Project, SelectOption } from "@/types";
+import type { Custody, PaginatedResponse, SelectOption } from "@/types";
 import { Plus, Search, Filter, Eye, CheckCircle, Shield } from "lucide-react";
 
-export default function CustodiesPage() {
+function CustodiesPageContent() {
   const [custodies, setCustodies] = useState<Custody[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -44,8 +44,8 @@ export default function CustodiesPage() {
       if (projectFilter) params.project_id = projectFilter;
       if (searchQuery) params.search = searchQuery;
       const res = await api.getCustodies(params) as PaginatedResponse<Custody>;
-      setCustodies(res.items);
-      setTotal(res.total);
+      setCustodies(res.items || []);
+      setTotal(res.total || 0);
     } catch (err) {
       addToast({ title: "خطأ", description: "فشل تحميل العهد", variant: "destructive" });
     } finally {
@@ -58,7 +58,10 @@ export default function CustodiesPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    api.getProjects().then((data: unknown) => setProjects(data as SelectOption[])).catch(() => {});
+    api.getProjects({ page_size: "200" }).then((res: any) => {
+      const items = Array.isArray(res) ? res : (res?.items || []);
+      setProjects(items.map((p: any) => ({ value: p.id, label: p.name || p.description || p.id })));
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -260,5 +263,13 @@ export default function CustodiesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function CustodiesPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <CustodiesPageContent />
+    </Suspense>
   );
 }

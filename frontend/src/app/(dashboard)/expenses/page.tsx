@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
@@ -11,13 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { PageLoader, EmptyState } from "@/components/shared/loading";
+import { PageLoader, EmptyState, LoadingSpinner } from "@/components/shared/loading";
 import { StatusBadge, CategoryBadge } from "@/components/shared/status-badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Expense, PaginatedResponse, SelectOption } from "@/types";
 import { Plus, Search, Eye, CheckCircle, XCircle, Receipt } from "lucide-react";
 
-export default function ExpensesPage() {
+function ExpensesPageContent() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -46,8 +46,8 @@ export default function ExpensesPage() {
       if (custodyFilter) params.custody_id = custodyFilter;
       if (searchQuery) params.search = searchQuery;
       const res = await api.getExpenses(params) as PaginatedResponse<Expense>;
-      setExpenses(res.items);
-      setTotal(res.total);
+      setExpenses(res.items || []);
+      setTotal(res.total || 0);
     } catch {
       addToast({ title: "خطأ", description: "فشل تحميل المصروفات", variant: "destructive" });
     } finally {
@@ -61,8 +61,15 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     Promise.all([
-      api.getExpenses({status: "open", page_size: "100"}).then((data: unknown) => setCustodies(data as SelectOption[])).catch(() => {}),
-      api.getProjects().then((data: unknown) => setProjects(data as SelectOption[])).catch(() => {}),
+      // FIX: Use api.getCustodies (not api.getExpenses) for the custody dropdown
+      api.getCustodies({ status: "open", page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setCustodies(items.map((c: any) => ({ value: c.id, label: c.description || c.holder_name || c.id })));
+      }).catch(() => {}),
+      api.getProjects({ page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setProjects(items.map((p: any) => ({ value: p.id, label: p.name || p.description || p.id })));
+      }).catch(() => {}),
     ]);
   }, []);
 
@@ -273,5 +280,13 @@ export default function ExpensesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function ExpensesPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <ExpensesPageContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
@@ -11,13 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { PageLoader, EmptyState } from "@/components/shared/loading";
+import { PageLoader, EmptyState, LoadingSpinner } from "@/components/shared/loading";
 import { PaymentTypeBadge } from "@/components/shared/status-badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Payment, PaginatedResponse, SelectOption } from "@/types";
 import { Plus, Search, Eye, CreditCard } from "lucide-react";
 
-export default function PaymentsPage() {
+function PaymentsPageContent() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -46,8 +46,8 @@ export default function PaymentsPage() {
       if (partyFilter) params.party_id = partyFilter;
       if (searchQuery) params.search = searchQuery;
       const res = await api.getPayments(params) as PaginatedResponse<Payment>;
-      setPayments(res.items);
-      setTotal(res.total);
+      setPayments(res.items || []);
+      setTotal(res.total || 0);
     } catch {
       addToast({ title: "خطأ", description: "فشل تحميل الدفعات", variant: "destructive" });
     } finally {
@@ -60,9 +60,16 @@ export default function PaymentsPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    // FIX: properly extract items from paginated responses
     Promise.all([
-      api.getParties().then((data: unknown) => setParties(data as SelectOption[])).catch(() => {}),
-      api.getProjects().then((data: unknown) => setProjects(data as SelectOption[])).catch(() => {}),
+      api.getParties({ page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setParties(items.map((p: any) => ({ value: p.id, label: p.name || p.id })));
+      }).catch(() => {}),
+      api.getProjects({ page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setProjects(items.map((p: any) => ({ value: p.id, label: p.name || p.description || p.id })));
+      }).catch(() => {}),
     ]);
   }, []);
 
@@ -255,5 +262,13 @@ export default function PaymentsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <PaymentsPageContent />
+    </Suspense>
   );
 }

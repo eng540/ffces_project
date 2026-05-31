@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
@@ -11,13 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { PageLoader, EmptyState } from "@/components/shared/loading";
+import { PageLoader, EmptyState, LoadingSpinner } from "@/components/shared/loading";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { WorkRecord, PaginatedResponse, SelectOption } from "@/types";
 import { Plus, Search, Eye, CheckCircle, XCircle, ClipboardList, Users } from "lucide-react";
 
-export default function WorkRecordsPage() {
+function WorkRecordsPageContent() {
   const [records, setRecords] = useState<WorkRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -49,8 +49,8 @@ export default function WorkRecordsPage() {
       if (dateTo) params.date_to = dateTo;
       if (searchQuery) params.search = searchQuery;
       const res = await api.getWorkRecords(params) as PaginatedResponse<WorkRecord>;
-      setRecords(res.items);
-      setTotal(res.total);
+      setRecords(res.items || []);
+      setTotal(res.total || 0);
     } catch {
       addToast({ title: "خطأ", description: "فشل تحميل سجلات العمل", variant: "destructive" });
     } finally {
@@ -63,9 +63,16 @@ export default function WorkRecordsPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    // FIX: properly extract items from paginated responses
     Promise.all([
-      api.getParties({type: "worker"}).then((data: unknown) => setParties(data as SelectOption[])).catch(() => {}),
-      api.getProjects().then((data: unknown) => setProjects(data as SelectOption[])).catch(() => {}),
+      api.getParties({ type: "worker", page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setParties(items.map((p: any) => ({ value: p.id, label: p.name || p.id })));
+      }).catch(() => {}),
+      api.getProjects({ page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setProjects(items.map((p: any) => ({ value: p.id, label: p.name || p.description || p.id })));
+      }).catch(() => {}),
     ]);
   }, []);
 
@@ -326,5 +333,13 @@ export default function WorkRecordsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function WorkRecordsPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <WorkRecordsPageContent />
+    </Suspense>
   );
 }

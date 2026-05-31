@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
@@ -12,13 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PageLoader, EmptyState } from "@/components/shared/loading";
+import { PageLoader, EmptyState, LoadingSpinner } from "@/components/shared/loading";
 import { PartyTypeBadge } from "@/components/shared/status-badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Party, PaginatedResponse, Payment, Entitlement } from "@/types";
 import { Plus, Search, Eye, Users } from "lucide-react";
 
-export default function PartiesPage() {
+function PartiesPageContent() {
   const [parties, setParties] = useState<Party[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -43,8 +43,8 @@ export default function PartiesPage() {
       if (typeFilter) params.type = typeFilter;
       if (searchQuery) params.search = searchQuery;
       const res = await api.getParties(params) as PaginatedResponse<Party>;
-      setParties(res.items);
-      setTotal(res.total);
+      setParties(res.items || []);
+      setTotal(res.total || 0);
     } catch {
       addToast({ title: "خطأ", description: "فشل تحميل الأطراف", variant: "destructive" });
     } finally {
@@ -87,11 +87,11 @@ export default function PartiesPage() {
     setViewOpen(true);
     try {
       const [paymentsRes, entitlementsRes] = await Promise.all([
-        api.getPayments({party_id: party.id, page_size: "100"}).catch(() => ({items: []})) as Promise<PaginatedResponse<Payment>>,
-        api.getEntitlements({party_id: party.id, page_size: "100"}).catch(() => ({items: []})) as Promise<PaginatedResponse<Entitlement>>,
+        api.getPayments({ party_id: party.id, page_size: "100" }).catch(() => ({ items: [] })) as Promise<PaginatedResponse<Payment>>,
+        api.getEntitlements({ party_id: party.id, page_size: "100" }).catch(() => ({ items: [] })) as Promise<PaginatedResponse<Entitlement>>,
       ]);
-      setPartyPayments(paymentsRes.items);
-      setPartyEntitlements(entitlementsRes.items);
+      setPartyPayments(paymentsRes.items || []);
+      setPartyEntitlements(entitlementsRes.items || []);
     } catch {
       // silently handle
     }
@@ -293,5 +293,13 @@ export default function PartiesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function PartiesPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <PartiesPageContent />
+    </Suspense>
   );
 }

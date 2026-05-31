@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -49,12 +49,21 @@ export default function ReportsPage() {
 
   const { addToast } = useToast();
 
-  // Load dropdowns
+  // FIX: properly extract items from paginated responses for dropdowns
   React.useEffect(() => {
     Promise.all([
-      api.getCustodies().then((data: unknown) => setCustodies(data as SelectOption[])).catch(() => {}),
-      api.getParties().then((data: unknown) => setParties(data as SelectOption[])).catch(() => {}),
-      api.getProjects().then((data: unknown) => setProjects(data as SelectOption[])).catch(() => {}),
+      api.getCustodies({ page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setCustodies(items.map((c: any) => ({ value: c.id, label: c.description || c.holder_name || c.id })));
+      }).catch(() => {}),
+      api.getParties({ page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setParties(items.map((p: any) => ({ value: p.id, label: p.name || p.id })));
+      }).catch(() => {}),
+      api.getProjects({ page_size: "200" }).then((res: any) => {
+        const items = Array.isArray(res) ? res : (res?.items || []);
+        setProjects(items.map((p: any) => ({ value: p.id, label: p.name || p.description || p.id })));
+      }).catch(() => {}),
     ]);
   }, []);
 
@@ -105,7 +114,14 @@ export default function ReportsPage() {
       setLoading(true);
       setError("");
       const data = await api.get<Custody[]>("/api/v1/reports/open-custodies");
-      setOpenCustodies(data);
+      // Handle both array and paginated responses
+      if (Array.isArray(data)) {
+        setOpenCustodies(data);
+      } else if (data && typeof data === "object" && "items" in data) {
+        setOpenCustodies((data as any).items || []);
+      } else {
+        setOpenCustodies([]);
+      }
       setOpenCustodiesLoaded(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "فشل تحميل التقرير");

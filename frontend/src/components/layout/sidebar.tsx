@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { logout, user } = useAuthStore();
   const [collapsed, setCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -48,6 +50,14 @@ export function Sidebar() {
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
+  };
+
+  // FIX: Use router.push for navigation instead of window.location.href
+  const handleLogout = () => {
+    logout();
+    // AuthGuard in layout will detect isAuthenticated=false and redirect
+    // But we also explicitly navigate to be safe
+    router.push("/login");
   };
 
   const sidebarContent = (
@@ -97,7 +107,7 @@ export function Sidebar() {
             </div>
           </div>
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="sidebar-item w-full mt-1 text-destructive hover:bg-red-50 hover:text-red-700 cursor-pointer"
           >
             <LogOut className="h-5 w-5" />
@@ -109,7 +119,7 @@ export function Sidebar() {
       {collapsed && (
         <div className="border-t border-border p-3">
           <button
-            onClick={logout}
+            onClick={handleLogout}
             className="sidebar-item w-full text-destructive hover:bg-red-50 hover:text-red-700 justify-center cursor-pointer"
             title="تسجيل الخروج"
           >

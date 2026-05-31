@@ -15,12 +15,17 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, [checkAuth]);
 
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [isAuthenticated, isLoading, router]);
+
   if (isLoading) {
     return <PageLoader />;
   }
 
   if (!isAuthenticated) {
-    router.replace("/login");
     return <PageLoader />;
   }
 

@@ -39,7 +39,14 @@ export default function DashboardPage() {
         api.get<OverdueCustodyAlert[]>("/api/v1/dashboard/overdue-alerts").catch(() => []),
       ]);
       setStats(statsData);
-      setAlerts(alertsData);
+      // Handle both paginated and direct array responses
+      if (Array.isArray(alertsData)) {
+        setAlerts(alertsData);
+      } else if (alertsData && typeof alertsData === "object" && "items" in alertsData) {
+        setAlerts((alertsData as any).items || []);
+      } else {
+        setAlerts([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "فشل تحميل البيانات");
     } finally {

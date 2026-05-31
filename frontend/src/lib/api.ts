@@ -2,12 +2,29 @@
 // FFCES API Client
 // ============================================
 
-const API_BASE = "";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 class ApiClient {
   private getToken(): string | null {
     if (typeof window === "undefined") return null;
-    return localStorage.getItem("access_token");
+    try {
+      return localStorage.getItem("access_token");
+    } catch {
+      return null;
+    }
+  }
+
+  private clearAuth() {
+    try {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("user");
+    } catch {
+      // ignore storage errors
+    }
+    // Dynamically import to avoid circular dependency at module level
+    import("./auth-store").then(({ useAuthStore }) => {
+      useAuthStore.getState().clearAuth();
+    });
   }
 
   private async request(path: string, options: RequestInit = {}) {
@@ -24,9 +41,7 @@ class ApiClient {
     });
 
     if (res.status === 401) {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      this.clearAuth();
       throw new Error("غير مصرح");
     }
 
@@ -35,8 +50,14 @@ class ApiClient {
     }
 
     if (!res.ok) {
-      const error = await res.json().catch(() => ({ detail: "فشل الطلب" }));
-      throw new Error(error.detail || "فشل الطلب");
+      let detail = "فشل الطلب";
+      try {
+        const error = await res.json();
+        detail = error.detail || detail;
+      } catch {
+        // response body is not JSON
+      }
+      throw new Error(detail);
     }
 
     return res.json();

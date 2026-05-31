@@ -8,8 +8,43 @@ interface AuthState {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  clearAuth: () => void;
   checkAuth: () => Promise<void>;
   hasRole: (role: UserRole) => boolean;
+}
+
+function safeGetItem(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeRemoveItem(key: string) {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // ignore storage errors (e.g., in private browsing)
+  }
+}
+
+function safeSetItem(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // ignore storage errors
+  }
+}
+
+function safeJSONParse<T>(value: string | null): T | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    // corrupted data in localStorage
+    return null;
+  }
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -19,14 +54,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email: string, password: string) => {
     try {
-      const response = await api.login(email, password) as {
+      const response = (await api.login(email, password)) as {
         access_token: string;
         token_type: string;
         user: User;
       };
 
-      localStorage.setItem("access_token", response.access_token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+      safeSetItem("access_token", response.access_token);
+      safeSetItem("user", JSON.stringify(response.user));
 
       set({
         user: response.user,
@@ -40,27 +75,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user");
+    safeRemoveItem("access_token");
+    safeRemoveItem("user");
     set({
       user: null,
       isAuthenticated: false,
       isLoading: false,
     });
-    window.location.href = "/login";
+    // Navigation is handled by the AuthGuard in layout.tsx
+    // which watches isAuthenticated and redirects to /login
+  },
+
+  clearAuth: () => {
+    safeRemoveItem("access_token");
+    safeRemoveItem("user");
+    set({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
   },
 
   checkAuth: async () => {
-    const token = localStorage.getItem("access_token");
-    const storedUser = localStorage.getItem("user");
+    const token = safeGetItem("access_token");
+    const storedUser = safeGetItem("user");
 
     if (token && storedUser) {
-      try {
-        const user = JSON.parse(storedUser) as User;
+      const user = safeJSONParse<User>(storedUser);
+      if (user) {
         set({ user, isAuthenticated: true, isLoading: false });
-      } catch {
-        localStorage.removeItem("access_token");
-        localStorage.removeItem("user");
+      } else {
+        // Corrupted user data - clear everything
+        safeRemoveItem("access_token");
+        safeRemoveItem("user");
         set({ user: null, isAuthenticated: false, isLoading: false });
       }
     } else {
