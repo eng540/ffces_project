@@ -102,4 +102,5 @@ echo "============================================="
 echo "  Starting FFCES server on port 8000..."
 echo "  DATABASE_URL ready"
 echo "============================================="
-exec uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1
+PORT=${PORT:-8000}
+exec uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
