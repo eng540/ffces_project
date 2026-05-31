@@ -54,6 +54,16 @@ async def lifespan(app: FastAPI):
     print(f"   Debug: {settings.DEBUG}")
     print(f"   CORS origins: {settings.cors_origins_list}")
 
+    # ==== إنشاء الجداول تلقائياً (Automatic table creation) ====
+    print("   Creating database tables (if not exist)...")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("   Database tables created/verified successfully")
+    except Exception as e:
+        print(f"   Error creating tables: {e}")
+        # لا نرفع الاستثناء لئلا يموت التطبيق، لكن نطبع الخطأ
+
     # Try connecting to Redis
     try:
         from app.core.redis_client import redis_client
