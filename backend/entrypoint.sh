@@ -8,40 +8,25 @@ echo "============================================="
 
 # ── Fix DATABASE_URL ──
 # Railway sometimes provides malformed URLs with template artifacts like }} or ${}
-# Clean them up before anything else
+# Use separate Python script to avoid bash substitution conflicts with regex patterns
 if [ -n "$DATABASE_URL" ]; then
     echo "[0] Cleaning DATABASE_URL..."
-    CLEAN_URL=$(python3 -c "
-import os, re
-url = os.environ.get('DATABASE_URL', '')
-# Remove template artifacts like }} ${{ }} ${} etc
-url = re.sub(r'\}\}+$', '', url)
-url = re.sub(r'\{\{?$', '', url)
-url = re.sub(r'\$\{[^}]*\}', '', url)
-# Remove trailing/leading whitespace
-url = url.strip()
-if url:
-    os.environ['DATABASE_URL'] = url
-    # Print masked URL for debug (hide password)
-    safe = re.sub(r'(:\/\/[^:]+:)[^@]+(@)', r'\1****\2', url)
-    print(f'  URL: {safe}')
-else:
-    print('  WARNING: DATABASE_URL is empty after cleanup!')
-")
-    export DATABASE_URL="$CLEAN_URL"
+    CLEAN_URL=$(python3 /app/clean_url.py) && export DATABASE_URL="$CLEAN_URL"
 fi
 
 # Wait for PostgreSQL
 if [ -n "$DATABASE_URL" ]; then
     echo "[1/3] Waiting for PostgreSQL..."
-    DB_HOST=$(python3 -c "
+
+    # Extract host:port from DATABASE_URL using Python (avoids bash regex issues)
+    DB_CONN=$(python3 -c "
 import os, re
 url = os.environ.get('DATABASE_URL', '')
 m = re.search(r'@([^:]+):(\d+)/', url)
 print(f'{m.group(1)}:{m.group(2)}' if m else 'localhost:5432')
 ")
-    HOST=${DB_HOST%%:*}
-    PORT=${DB_HOST##*:}
+    HOST="${DB_CONN%%:*}"
+    PORT="${DB_CONN##*:}"
 
     MAX_RETRIES=30
     COUNT=0
@@ -77,11 +62,6 @@ alembic upgrade head 2>&1 || {
     echo "  WARNING: Migration failed - but continuing to start server."
     echo "  Tables may already exist from a previous run."
 }
-
-# Also clean DATABASE_URL for the main app (uvicorn)
-if [ -n "$CLEAN_URL" ]; then
-    export DATABASE_URL="$CLEAN_URL"
-fi
 
 echo "============================================="
 echo "  Starting FFCES server on port 8000..."

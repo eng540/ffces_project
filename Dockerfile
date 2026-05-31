@@ -36,6 +36,7 @@ COPY backend/main.py .
 COPY backend/alembic.ini .
 COPY backend/alembic/ ./alembic/
 COPY backend/entrypoint.sh .
+COPY backend/clean_url.py .
 RUN chmod +x entrypoint.sh
 
 # Copy frontend static files from build stage
