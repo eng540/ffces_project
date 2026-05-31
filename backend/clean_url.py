@@ -7,14 +7,12 @@ url = os.environ.get('DATABASE_URL', '')
 if not url:
     sys.exit(1)
 
-# Remove template artifacts like }} or {{ or ${}
 url = re.sub(r'\}\}+$', '', url)
 url = re.sub(r'\{\{?$', '', url)
 url = re.sub(r'\$\{[^}]*\}', '', url)
 url = url.strip()
 
 if url:
-    # Only print the clean URL, nothing else
     print(url)
     sys.exit(0)
 else:
