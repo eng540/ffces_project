@@ -282,7 +282,7 @@ function WorkRecordsPageContent() {
       {loading ? <PageLoader /> : records.length === 0 ? (
         <EmptyState icon={<ClipboardList className="h-12 w-12" />} title="لا توجد سجلات" description="لم يتم العثور على سجلات عمل." />
       ) : (
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

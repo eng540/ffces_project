@@ -184,7 +184,7 @@ function CustodiesPageContent() {
       ) : custodies.length === 0 ? (
         <EmptyState icon={<Shield className="h-12 w-12" />} title="لا توجد عهد" description="لم يتم العثور على عهد. قم بإنشاء عهدة جديدة." />
       ) : (
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

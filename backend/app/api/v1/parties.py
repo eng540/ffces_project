@@ -63,7 +63,7 @@ async def create_party(
 @router.get("", response_model=PaginatedResponse)
 async def list_parties(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=500),
     search: Optional[str] = Query(None),
     party_type: Optional[str] = Query(None, alias="type"),
     db: AsyncSession = Depends(get_db),
@@ -223,7 +223,7 @@ async def create_project(
 @router.get("/projects", response_model=PaginatedResponse)
 async def list_projects(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=500),
     search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),

@@ -96,7 +96,7 @@ async def create_custody(
 @router.get("", response_model=PaginatedResponse)
 async def list_custodies(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=500),
     search: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
     holder_id: Optional[uuid.UUID] = Query(None),

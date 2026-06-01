@@ -70,7 +70,7 @@ async def create_work_record(
 @router.get("", response_model=PaginatedResponse)
 async def list_work_records(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=500),
     user_id: Optional[uuid.UUID] = Query(None),
     project_id: Optional[uuid.UUID] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),

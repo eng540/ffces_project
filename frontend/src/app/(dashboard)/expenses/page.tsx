@@ -210,7 +210,7 @@ function ExpensesPageContent() {
       {loading ? <PageLoader /> : expenses.length === 0 ? (
         <EmptyState icon={<Receipt className="h-12 w-12" />} title="لا توجد مصروفات" description="لم يتم العثور على مصروفات. قم بإنشاء مصروف جديد." />
       ) : (
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

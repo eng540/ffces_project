@@ -186,7 +186,7 @@ export default function EntitlementsPage() {
       {loading ? <PageLoader /> : entitlements.length === 0 ? (
         <EmptyState icon={<DollarSign className="h-12 w-12" />} title="لا توجد مستحقات" description="لم يتم العثور على مستحقات. قم بحساب مستحقات جديدة." />
       ) : (
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth-store";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -37,13 +37,22 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   return (
     <ToastProvider>
       <AuthGuard>
         <div className="min-h-screen bg-background">
-          <Sidebar />
-          <main className="lg:me-64 transition-all duration-300 min-h-screen">
-            <div className="p-4 lg:p-6 pt-16 lg:pt-6">
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            onCollapsedChange={setSidebarCollapsed}
+          />
+          <main
+            className={`transition-all duration-300 min-h-screen ${
+              sidebarCollapsed ? "lg:me-16" : "lg:me-64"
+            }`}
+          >
+            <div className="p-4 lg:p-6 pt-16 lg:pt-6 max-w-[1600px] mx-auto">
               {children}
             </div>
           </main>

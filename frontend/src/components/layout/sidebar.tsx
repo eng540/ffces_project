@@ -40,11 +40,15 @@ const navItems: NavItem[] = [
   { href: "/reports", label: "التقارير", icon: <FileText className="h-5 w-5" /> },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
+}
+
+export function Sidebar({ collapsed, onCollapsedChange }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout, user } = useAuthStore();
-  const [collapsed, setCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const isActive = (href: string) => {
@@ -52,11 +56,8 @@ export function Sidebar() {
     return pathname.startsWith(href);
   };
 
-  // FIX: Use router.push for navigation instead of window.location.href
   const handleLogout = () => {
     logout();
-    // AuthGuard in layout will detect isAuthenticated=false and redirect
-    // But we also explicitly navigate to be safe
     router.push("/login");
   };
 
@@ -173,7 +174,7 @@ export function Sidebar() {
       >
         {sidebarContent}
         <button
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => onCollapsedChange(!collapsed)}
           className="absolute -start-3 top-20 flex h-6 w-6 items-center justify-center rounded-full bg-card border border-border shadow-sm hover:bg-muted cursor-pointer"
         >
           <ChevronLeft

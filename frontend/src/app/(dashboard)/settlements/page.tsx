@@ -164,7 +164,7 @@ export default function SettlementsPage() {
       {loading ? <PageLoader /> : settlements.length === 0 ? (
         <EmptyState icon={<Scale className="h-12 w-12" />} title="لا توجد تسويات" description="لم يتم العثور على تسويات." />
       ) : (
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -82,7 +82,7 @@ async def create_settlement(
 @router.get("", response_model=PaginatedResponse)
 async def list_settlements(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=500),
     custody_id: Optional[uuid.UUID] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
     user_id: Optional[uuid.UUID] = Query(None),

@@ -180,7 +180,7 @@ function PartiesPageContent() {
       {loading ? <PageLoader /> : parties.length === 0 ? (
         <EmptyState icon={<Users className="h-12 w-12" />} title="لا توجد أطراف" description="لم يتم العثور على أطراف. قم بإضافة طرف جديد." />
       ) : (
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

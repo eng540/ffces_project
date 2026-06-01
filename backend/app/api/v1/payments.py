@@ -71,7 +71,7 @@ async def create_payment(
 @router.get("", response_model=PaginatedResponse)
 async def list_payments(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=500),
     status_filter: Optional[str] = Query(None, alias="status"),
     payment_method: Optional[str] = Query(None),
     payee_id: Optional[uuid.UUID] = Query(None),

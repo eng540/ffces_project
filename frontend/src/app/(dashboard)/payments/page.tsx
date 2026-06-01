@@ -202,7 +202,7 @@ function PaymentsPageContent() {
       {loading ? <PageLoader /> : payments.length === 0 ? (
         <EmptyState icon={<CreditCard className="h-12 w-12" />} title="لا توجد دفعات" description="لم يتم العثور على دفعات. قم بإنشاء دفعة جديدة." />
       ) : (
-        <div className="data-table-wrapper">
+        <div className="data-table-wrapper overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

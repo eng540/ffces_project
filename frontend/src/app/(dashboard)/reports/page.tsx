@@ -366,7 +366,7 @@ export default function ReportsPage() {
               {openCustodiesLoaded && openCustodies.length === 0 ? (
                 <EmptyState icon={<Shield className="h-12 w-12" />} title="لا توجد عهد مفتوحة" />
               ) : openCustodiesLoaded && (
-                <div className="data-table-wrapper">
+                <div className="data-table-wrapper overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
